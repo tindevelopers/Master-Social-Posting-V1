@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "pnpm"]
+
+[phases.install]
+cmds = ["pnpm install"]
+
+[phases.build]
+cmds = ["pnpm run prisma-generate", "NODE_OPTIONS='--max-old-space-size=4096' pnpm run build"]
+
+[start]
+cmd = "pnpm run railway:start"

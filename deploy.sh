@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-PROJECT_ID="postiz-production"
+PROJECT_ID="postiz-master-social-v1"
 REGION="us-central1"
 SERVICE_ACCOUNT="postiz-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 
@@ -37,31 +37,9 @@ gcloud services enable redis.googleapis.com
 gcloud services enable storage.googleapis.com
 gcloud services enable secretmanager.googleapis.com
 
-# Create Cloud SQL PostgreSQL instance
-echo "🗄️ Creating Cloud SQL PostgreSQL instance..."
-gcloud sql instances create postiz-db \
-    --database-version=POSTGRES_15 \
-    --tier=db-f1-micro \
-    --region=${REGION} \
-    --storage-type=SSD \
-    --storage-size=10GB \
-    --backup \
-    --enable-ip-alias \
-    --authorized-networks=0.0.0.0/0 \
-    --quiet || echo "Database instance may already exist"
-
-# Create database
-echo "📊 Creating database..."
-gcloud sql databases create postiz_production \
-    --instance=postiz-db \
-    --quiet || echo "Database may already exist"
-
-# Create database user
-echo "👤 Creating database user..."
-gcloud sql users create postiz \
-    --instance=postiz-db \
-    --password=$(openssl rand -base64 32) \
-    --quiet || echo "User may already exist"
+# Note: Database setup requires additional permissions
+echo "🗄️ Database setup requires additional IAM permissions"
+echo "Please set up Cloud SQL manually or grant SQL Admin role to this account"
 
 # Create Memorystore Redis instance
 echo "🔴 Creating Memorystore Redis instance..."

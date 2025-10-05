@@ -1,0 +1,31 @@
+FROM node:20-alpine3.19
+
+# Install pnpm
+RUN npm install -g pnpm@10.6.1
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/frontend/package.json ./apps/frontend/
+COPY apps/backend/package.json ./apps/backend/
+COPY apps/workers/package.json ./apps/workers/
+COPY apps/cron/package.json ./apps/cron/
+
+# Install dependencies
+RUN pnpm install
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN pnpm run prisma-generate
+
+# Build the application
+RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm run build
+
+# Expose port
+EXPOSE 5000
+
+# Start the frontend
+CMD ["pnpm", "--filter", "./apps/frontend", "run", "start"]
