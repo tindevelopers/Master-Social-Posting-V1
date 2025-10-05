@@ -36,7 +36,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const allHeaders = headers();
   const Plausible = !!process.env.STRIPE_PUBLISHABLE_KEY
     ? PlausibleProvider
-    : Fragment;
+    : ({ children, ...props }: any) => <Fragment>{children}</Fragment>;
   return (
     <html>
       <head>
