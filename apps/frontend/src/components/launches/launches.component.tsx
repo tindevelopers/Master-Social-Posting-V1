@@ -133,16 +133,29 @@ export const MenuGroupComponent: FC<
     changeItemGroup,
     collapsed,
   } = props;
-  const [isOpen, setIsOpen] = useState(
-    !!+(localStorage.getItem(group.name + '_isOpen') || '1')
-  );
+  
+  // Initialize with true (default open) to avoid hydration mismatch
+  const [isOpen, setIsOpen] = useState(true);
+  
+  // Load saved state from localStorage after mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(group.name + '_isOpen');
+      if (saved !== null) {
+        setIsOpen(!!+saved);
+      }
+    }
+  }, [group.name]);
+  
   const changeOpenClose = useCallback(
     (e: any) => {
       setIsOpen(!isOpen);
-      localStorage.setItem(group.name + '_isOpen', isOpen ? '0' : '1');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(group.name + '_isOpen', isOpen ? '0' : '1');
+      }
       e.stopPropagation();
     },
-    [isOpen]
+    [isOpen, group.name]
   );
   const [collectedProps, drop] = useDrop(() => ({
     accept: 'menu',

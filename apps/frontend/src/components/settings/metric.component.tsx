@@ -1,7 +1,7 @@
 'use client';
 
 import { Select } from '@gitroom/react/form/select';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { isUSCitizen } from '@gitroom/frontend/components/launches/helpers/isuscitizen.utils';
 import timezones from 'timezones-list';
 const dateMetrics = [
@@ -14,10 +14,15 @@ import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(timezone);
 
 const MetricComponent = () => {
-  const [currentMetric, setCurrentMetric] = useState(isUSCitizen());
-  const [timezone, setTimezone] = useState(
-    localStorage.getItem('timezone') || dayjs.tz.guess()
-  );
+  // Initialize with null to avoid hydration mismatch
+  const [currentMetric, setCurrentMetric] = useState<boolean | null>(null);
+  const [timezone, setTimezone] = useState<string | null>(null);
+
+  // Load from localStorage only on client-side after mount
+  useEffect(() => {
+    setCurrentMetric(isUSCitizen());
+    setTimezone(localStorage.getItem('timezone') || dayjs.tz.guess());
+  }, []);
   const changeMetric = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
     setCurrentMetric(value === 'US');
@@ -31,6 +36,17 @@ const MetricComponent = () => {
     localStorage.setItem('timezone', value);
     dayjs.tz.setDefault(value);
   };
+
+  // Don't render until client-side hydration is complete
+  if (currentMetric === null) {
+    return (
+      <div className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
+        <div className="mt-[4px]">Date Metrics</div>
+        <div className="animate-pulse h-10 bg-fifth rounded"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="my-[16px] mt-[16px] bg-sixth border-fifth border rounded-[4px] p-[24px] flex flex-col gap-[24px]">
       <div className="mt-[4px]">Date Metrics</div>

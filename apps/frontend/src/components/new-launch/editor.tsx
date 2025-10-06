@@ -567,7 +567,7 @@ export const Editor: FC<{
           <div className="relative">
             <div className="absolute z-[200] top-[35px] -start-[50px]">
               <EmojiPicker
-                theme={(localStorage.getItem('mode') as Theme) || Theme.DARK}
+                theme={typeof window !== 'undefined' ? (localStorage.getItem('mode') as Theme) || Theme.DARK : Theme.DARK}
                 onEmojiClick={(e) => {
                   addText(e.emoji);
                   setEmojiPickerOpen(false);
