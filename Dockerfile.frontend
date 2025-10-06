@@ -1,0 +1,53 @@
+# Multi-stage build for frontend
+FROM node:20-alpine3.19 AS base
+
+# Install pnpm
+RUN npm install -g pnpm@10.6.1
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/frontend/package.json ./apps/frontend/
+COPY libraries/*/package.json ./libraries/*/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN pnpm run prisma-generate
+
+# Build frontend
+FROM base AS frontend
+RUN pnpm --filter ./apps/frontend run build
+
+# Production stage
+FROM node:20-alpine3.19 AS production
+
+# Install pnpm
+RUN npm install -g pnpm@10.6.1
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/frontend/package.json ./apps/frontend/
+COPY libraries/*/package.json ./libraries/*/
+
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy built application
+COPY --from=frontend /app/apps/frontend/.next ./apps/frontend/.next
+COPY --from=frontend /app/apps/frontend/public ./apps/frontend/public
+COPY --from=frontend /app/apps/frontend/next.config.js ./apps/frontend/
+COPY --from=frontend /app/libraries ./libraries
+
+# Expose port
+EXPOSE 4200
+
+# Start the application
+CMD ["pnpm", "--filter", "./apps/frontend", "run", "start"]
