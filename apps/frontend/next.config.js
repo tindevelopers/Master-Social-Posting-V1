@@ -6,6 +6,11 @@ const nextConfig = {
   experimental: {
     proxyTimeout: 90_000,
   },
+  // Optimize for Cloud Run deployment
+  output: 'standalone',
+  // Reduce memory usage during build
+  swcMinify: true,
+  compress: true,
   // Document-Policy header for browser profiling
   async headers() {
     return [{

@@ -1,0 +1,82 @@
+# Multi-stage build to optimize memory usage
+FROM node:20-alpine3.19 AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm@10.6.1
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/*/package.json ./apps/*/
+COPY libraries/*/package.json ./libraries/*/
+
+# Copy Prisma schema for postinstall script
+COPY libraries/nestjs-libraries/src/database/prisma/schema.prisma ./libraries/nestjs-libraries/src/database/prisma/
+
+# Install dependencies
+RUN pnpm install --no-frozen-lockfile
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Install pnpm
+RUN npm install -g pnpm@10.6.1
+
+# Set environment variables for build
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Generate Prisma client
+RUN pnpm run prisma-generate
+
+# Build the application with increased memory
+RUN NODE_OPTIONS="--max-old-space-size=6144" pnpm run build
+
+# Production image, copy all the files and run the app
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy built application
+COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
+COPY --from=builder /app/apps/frontend/.next/standalone ./
+COPY --from=builder /app/apps/frontend/.next/static ./apps/frontend/.next/static
+
+# Copy backend and other services
+COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder /app/apps/workers/dist ./apps/workers/dist
+COPY --from=builder /app/apps/cron/dist ./apps/cron/dist
+
+# Copy libraries
+COPY --from=builder /app/libraries ./libraries
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy package files
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+
+# Install production dependencies only
+RUN npm install -g pnpm@10.6.1
+RUN pnpm install --prod --no-frozen-lockfile
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Start the application
+CMD ["node", "apps/frontend/server.js"]

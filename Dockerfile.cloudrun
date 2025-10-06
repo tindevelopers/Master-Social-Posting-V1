@@ -1,0 +1,44 @@
+FROM node:20-alpine3.19
+ARG NEXT_PUBLIC_VERSION
+ENV NEXT_PUBLIC_VERSION=$NEXT_PUBLIC_VERSION
+
+# Install system dependencies
+RUN apk add --no-cache g++ make py3-pip bash nginx
+
+# Create user
+RUN adduser -D -g 'www' www
+RUN mkdir /www
+RUN chown -R www:www /var/lib/nginx
+RUN chown -R www:www /www
+
+# Install pnpm and pm2
+RUN npm --no-update-notifier --no-fund --global install pnpm@10.6.1 pm2
+
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/*/package.json ./apps/*/
+COPY libraries/*/package.json ./libraries/*/
+
+# Copy Prisma schema
+COPY libraries/nestjs-libraries/src/database/prisma/schema.prisma ./libraries/nestjs-libraries/src/database/prisma/
+
+# Install dependencies
+RUN pnpm install --no-frozen-lockfile
+
+# Copy source code
+COPY . /app
+COPY var/docker/nginx.conf /etc/nginx/nginx.conf
+
+# Set memory limits for build
+ENV NODE_OPTIONS="--max-old-space-size=6144"
+
+# Build the application
+RUN pnpm run build
+
+# Expose port
+EXPOSE 3000
+
+# Start the application
+CMD ["sh", "-c", "nginx && pnpm run pm2"]
