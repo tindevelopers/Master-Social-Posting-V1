@@ -1,3 +1,25 @@
+[build]
+    builder = "NIXPACKS"
+    buildCommand = "pnpm install && NODE_OPTIONS='--max-old-space-size=6144' pnpm run build"
+
+[deploy]
+    startCommand = "pnpm run pm2"
+    restartPolicyType = "ON_FAILURE"
+    restartPolicyMaxRetries = 10
+    healthcheckPath = "/api/health"
+    healthcheckTimeout = 300
+
 [phases.setup]
-    nixPkgs = ['nodejs', 'python3']
+    nixPkgs = ['nodejs-20_x', 'python3', 'postgresql']
     aptPkgs = ['build-essential', 'libudev-dev']
+
+[phases.install]
+    cmds = [
+        "npm install -g pnpm@10.6.1",
+        "pnpm install"
+    ]
+
+[phases.build]
+    cmds = [
+        "NODE_OPTIONS='--max-old-space-size=6144' pnpm run build"
+    ]
