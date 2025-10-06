@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = []
+
+[phases.build]
+cmds = []
+
+[start]
+cmd = "sh -c 'nginx && pnpm run pm2'"
